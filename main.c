@@ -28,8 +28,10 @@ int main(int argc, char ** argv)
 		return 0;
 	}
 	if (argv[1][0] == 'c') { 
+		printf("calling client\n");
 		return client(argv[3], port);
 	} else if (argv[1][0] == 's') {
+		printf("calling server\n");
 		return server(port);
 	} else {
 		fprintf(stderr, "unkonwn commend type %s\n", argv[1]);
@@ -94,21 +96,21 @@ int server(uint16_t port)
 
 	//Construct the address data structure by filling in its own port number
 	client_addr.sin_family = AF_INET;
-	client_addr.sin_addr = INADDR_ANY;
+	client_addr.sin_addr.s_addr = htons(INADDR_ANY);
 	client_addr.sin_port = htons(port);
 
 
 	//Passive open: Create socket
 	
-	if ((sock = socket(AF_INET, SOCK_STREAM/, 0)) < 0) {
+	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 		perror("Create socket error:");
 		return 1;
 	}
-
+	printf("created server created socket.");
 
 	//Bind socket to local address
 
-	if ((bind(sock, (struct sockaddr *)&client_addr, sizeof(client_addr)) < 0){
+	if ((bind(sock, (struct sockaddr *)&client_addr, sizeof(client_addr))) < 0){
 		perror("Binding error:");
 		return 1;
 	}
@@ -126,7 +128,10 @@ int server(uint16_t port)
 		}
 
 		while (recv_len = recv(new_sock, buf, sizeof(buf), 0)){
-			fputs(buf, stdout);
+			if (send(sock, buf, strnlen(buf, MAX_MSG_LENGTH), 0) < 0) {
+				perror("Echo error:");
+				return 1;
+			}
 		}
 		close(new_sock);
 	}
