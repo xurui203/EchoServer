@@ -99,6 +99,7 @@ int server(uint16_t port)
 	client_addr.sin_addr.s_addr = htons(INADDR_ANY);
 	client_addr.sin_port = htons(port);
 
+	printf("Server called\n");
 
 	//Passive open: Create socket
 	
@@ -106,7 +107,8 @@ int server(uint16_t port)
 		perror("Create socket error:");
 		return 1;
 	}
-	printf("created server created socket.");
+	
+	printf("Server created socket.");
 
 	//Bind socket to local address
 
@@ -127,12 +129,23 @@ int server(uint16_t port)
 			return 1;
 		}
 
-		while (recv_len = recv(new_sock, buf, sizeof(buf), 0)){
+		int recv_len = 0;
+		if ((recv_len = recv(sock, buf, sizeof(buf), 0)) < 0) {
+			perror("Server recv error:");
+			return 1;
+		}
+
+		if (send(sock, buf, strnlen(buf, MAX_MSG_LENGTH), 0) < 0) {
+			perror("Echo error:");
+			return 1;
+		}
+
+		/*while (recv_len = recv(new_sock, buf, sizeof(buf), 0)){
 			if (send(sock, buf, strnlen(buf, MAX_MSG_LENGTH), 0) < 0) {
 				perror("Echo error:");
 				return 1;
 			}
-		}
+		}*/
 		close(new_sock);
 	}
 	return 0;
