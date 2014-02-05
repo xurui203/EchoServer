@@ -12,55 +12,45 @@ int client(const char * addr, uint16_t port);
 #define MAX_MSG_LENGTH (1300)
 #define MAX_BACK_LOG (5)
 
-//argc = argument count = number of strings pointed to by argv
-//argv = argument vector
 int main(int argc, char ** argv)
 {
-	if (argc < 3) { 
+	if (argc < 3) {
 		printf("usage: myprog c <port> <address> or myprog s <port>\n");
 		return 0;
 	}
-
 
 	uint16_t port = atoi(argv[2]);
 	if (port < 1024) {
 		fprintf(stderr, "port number should be equal to or larger than 1024\n");
 		return 0;
 	}
-	if (argv[1][0] == 'c') { 
-		printf("calling client\n");
+	if (argv[1][0] == 'c') {
 		return client(argv[3], port);
 	} else if (argv[1][0] == 's') {
-		printf("calling server\n");
 		return server(port);
 	} else {
-		fprintf(stderr, "unkonwn commend type %s\n", argv[1]);
+		fprintf(stderr, "unknown command type %s\n", argv[1]);
 		return 0;
 	}
 	return 0;
 }
 
-int client(const char * addr, uint16_t port) //server's IP address, server's port number
+int client(const char * addr, uint16_t port)
 {
 	int sock;
 	struct sockaddr_in server_addr;
 	char msg[MAX_MSG_LENGTH], reply[MAX_MSG_LENGTH];
 
-	//Create socket
-	if ((sock = socket(AF_INET, SOCK_STREAM/* use tcp */, 0)) < 0) {
+	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 		perror("Create socket error:");
 		return 1;
 	}
 
 	printf("Socket created\n");
+	server_addr.sin_addr.s_addr = inet_addr(addr);
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_port = htons(port);
 
-	//Construct the address data structure expected by socket interface
-	server_addr.sin_addr.s_addr = inet_addr(addr); //set address to be address given
-	server_addr.sin_family = AF_INET; //set protocol family to be Internet TCP
-	server_addr.sin_port = htons(port); //specify server port to be port number given in argument
-
-
-	// Active open, connect to server
 	if (connect(sock, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
 		perror("Connect error:");
 		return 1;
@@ -69,7 +59,7 @@ int client(const char * addr, uint16_t port) //server's IP address, server's por
 	printf("Connected to server %s:%d\n", addr, port);
 
 	while (1) {
-		printf("Enter message: \n");
+		printf("Enter message%s: \n", reply);
 		scanf("%s", msg);
 
 		if (send(sock, msg, strnlen(msg, MAX_MSG_LENGTH), 0) < 0) {
@@ -82,7 +72,8 @@ int client(const char * addr, uint16_t port) //server's IP address, server's por
 			return 1;
 		}
 		reply[recv_len] = 0;
-		printf("Server reply:\n%s\n", reply);
+		printf("Server reply: %s\n", reply);
+		bzero(reply, MAX_MSG_LENGTH);
 	}
 	return 0;
 }
@@ -95,58 +86,45 @@ int server(uint16_t port)
 	int recv_len;
 
 	//Construct the address data structure by filling in its own port number
+	bzero(&client_addr, sizeof(client_addr));
 	client_addr.sin_family = AF_INET;
 	client_addr.sin_addr.s_addr = htons(INADDR_ANY);
 	client_addr.sin_port = htons(port);
 
-	printf("Server called\n");
-
 	//Passive open: Create socket
-	
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
 		perror("Create socket error:");
 		return 1;
 	}
-	
-	printf("Server created socket.");
 
 	//Bind socket to local address
-
 	if ((bind(sock, (struct sockaddr *)&client_addr, sizeof(client_addr))) < 0){
 		perror("Binding error:");
 		return 1;
 	}
+	printf("bind done.\n");
 
 	//Set up maximum number of pending connections to be allowed
 	listen(sock, MAX_BACK_LOG);
-
+	printf("listen done. waiting for connection\n");
+	
 	//Loop: wait for a remote host to try to connect.
-		//When connected, receive and echo characters that arrive on the connection
-
+	//When connected, receive and echo characters that arrive on the connection
 	while (1){
-		if ((new_sock = accept(sock, (struct sockaddr *)&client_addr, &recv_len)) < 0){ //&??
-			perror("Accepting error:");
+		if ((new_sock = accept(sock, (struct sockaddr*) &client_addr, &recv_len)) < 0){
+			perror("simplex-talk: accept");
 			return 1;
 		}
 
-		int recv_len = 0;
-		if ((recv_len = recv(sock, buf, sizeof(buf), 0)) < 0) {
-			perror("Server recv error:");
-			return 1;
+
+		while (recv_len = read(new_sock,buf,MAX_MSG_LENGTH)){
+			printf("Echoing back - %s\n",buf);
+			write(new_sock, buf, strlen(buf)+1);
+			bzero( buf, MAX_MSG_LENGTH);
 		}
 
-		if (send(sock, buf, strnlen(buf, MAX_MSG_LENGTH), 0) < 0) {
-			perror("Echo error:");
-			return 1;
-		}
-
-		/*while (recv_len = recv(new_sock, buf, sizeof(buf), 0)){
-			if (send(sock, buf, strnlen(buf, MAX_MSG_LENGTH), 0) < 0) {
-				perror("Echo error:");
-				return 1;
-			}
-		}*/
 		close(new_sock);
 	}
+
 	return 0;
 }
