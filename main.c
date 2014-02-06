@@ -117,7 +117,7 @@ int server(uint16_t port)
 		}
 
 
-		while (recv_len = read(new_sock,buf,MAX_MSG_LENGTH)){
+		while (recv_len = recv(new_sock,buf,MAX_MSG_LENGTH, 0)){
 			printf("Echoing back - %s\n",buf);
 			write(new_sock, buf, strlen(buf)+1);
 			bzero( buf, MAX_MSG_LENGTH);
