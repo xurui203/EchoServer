@@ -112,7 +112,7 @@ int server(uint16_t port)
 	//When connected, receive and echo characters that arrive on the connection
 	while (1){
 		if ((new_sock = accept(sock, (struct sockaddr*) &client_addr, &recv_len)) < 0){
-			perror("simplex-talk: accept");
+			perror("Server accept error:");
 			return 1;
 		}
 
